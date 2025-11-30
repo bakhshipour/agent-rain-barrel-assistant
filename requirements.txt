@@ -1,0 +1,19 @@
+# Core dependencies
+gradio>=4.0.0
+google-generativeai>=0.3.0
+google-cloud-firestore>=2.11.0
+google-cloud-secret-manager>=2.16.0
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Scheduling (for weather monitoring)
+apscheduler>=3.10.0
+
+# Data processing
+pandas>=2.0.0
+plotly>=5.17.0
+numpy>=1.24.0
+
+# Google ADK (for agents) - if available
+# google-adk>=0.1.0
+
