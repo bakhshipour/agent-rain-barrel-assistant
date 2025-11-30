@@ -147,7 +147,7 @@ The system is production-ready and deployed on Google Cloud Platform:
 
 ## Attachments
 
-**GitHub Repository**: [URL to be added]
+**GitHub Repository**: https://github.com/bakhshipour/agent-rain-barrel-assistant
 
 ---
 
