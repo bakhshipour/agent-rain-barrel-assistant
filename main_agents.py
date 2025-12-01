@@ -2397,7 +2397,7 @@ Workflow patterns:
   NOTE: latitude and longitude will be automatically geocoded from the address when you call update_user_profile_tool - you don't need to provide them.
   After successfully calling update_user_profile_tool, clearly state "I registered you successfully" or "Registration complete".
 
-**For status checks and planning requests (e.g., "plan operations for next 24 hours"):**
+**For status checks, barrel level updates, and planning requests (e.g., "my tank level is 50%", "plan operations for next 24 hours"):**
 - When user asks for planning, recommendations, or operational advice:
   1. **Fetch user profile** using get_user_profile_tool(user_id) to get the profile data.
   2. **Extract data from profile:**
@@ -2415,9 +2415,16 @@ Workflow patterns:
   3. **Check if profile has required data:**
      - If capacity_liters is 0, null, or missing, ask user: "What is your barrel capacity in liters?"
      - If catchment_area_m2 is 0, null, or missing, ask user: "What is your catchment area in square meters?"
-     - If latest_state is null or fill_level_liters is 0, null, or missing, ask user: "What is your current water level in liters?"
-     - DO NOT proceed with planning until ALL required data is available (all three values must be > 0).
-  4. **Once all data is available, proceed with planning:**
+    - If latest_state is null or fill_level_liters is 0, null, or missing, ask user: "What is your current water level in liters?"
+    - DO NOT proceed with planning until ALL required data is available (all three values must be > 0).
+  4. **If the user provides a NEW current water level (e.g., "my tank level is 50%" or "I have 500 liters now"):**
+     - Interpret the value in liters whenever possible (convert percentages using the known capacity_liters when needed).
+     - Immediately update the stored profile by calling update_user_profile_tool with a COMPLETE payload:
+       a. First call get_user_profile_tool(user_id) to get the existing profile.
+       b. Construct a new profile payload that copies ALL existing fields (user_id, email, address, barrel_specs, usage_profile, preferences, etc.).
+       c. Set latest_state to: {"fill_level_liters": <new_level_liters>, "measured_at": "<current ISO timestamp>"}.
+       d. Call update_user_profile_tool with this updated payload so the new level is persisted for future plans and UI synchronization.
+  5. **Once all data is available, proceed with planning:**
      a. **Get weather forecast** using weather_timeseries_tool with the address from profile (or lat/lon if available).
      b. **Estimate consumption** using consumption_estimation_tool with:
         - usage_profile: from the fetched profile
@@ -2689,7 +2696,7 @@ async def orchestrator_query_async(
             - raw_events (optional): raw runner events when debug=True
     """
     # Use the most intelligent model (gemini-3-pro-preview) for better planning and reasoning
-    model = Gemini(model="gemini-3-pro-preview")
+    model = Gemini(model="gemini-2.5-flash")
     memory_client = create_memory_client(use_vertex_memory=use_vertex_memory)
     
     # Get or create session memory client
@@ -2911,7 +2918,7 @@ Now generate an executive summary from this assistant response:
 Executive Summary:"""
         
         # Use async model call
-        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        model = genai.GenerativeModel('gemini-2.5-flash')
         response = await model.generate_content_async(prompt)
         
         if response and response.text:

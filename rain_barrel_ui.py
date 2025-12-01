@@ -1330,8 +1330,21 @@ def create_gradio_interface():
             if not message:
                 current_summary = (summary or {}).get("text", SUMMARY_DEFAULT)
                 current_time = (summary or {}).get("timestamp")
+                # For simple refresh with no new message, use lightweight formatter (no LLM call)
                 summary_markdown = format_summary_section(current_summary, current_time)
-                return history, "", summary_markdown, summary, current_address, current_catchment, current_level, current_barrel_radius, current_barrel_height, gr.update(visible=False), session_id
+                return (
+                    history,
+                    "",
+                    summary_markdown,
+                    summary,
+                    current_address,
+                    current_catchment,
+                    current_level,
+                    current_barrel_radius,
+                    current_barrel_height,
+                    gr.update(visible=False),
+                    session_id,
+                )
 
             # Generate session_id if not provided and no user_id
             # Session memory allows unregistered users to have conversation context
@@ -1391,6 +1404,7 @@ def create_gradio_interface():
             if response.lower().startswith("error"):
                 prior_text = (summary or {}).get("text", SUMMARY_DEFAULT)
                 prior_time = (summary or {}).get("timestamp")
+                # Keep existing summary on errors – no new LLM call
                 summary_markdown = format_summary_section(prior_text, prior_time)
                 updated_summary = summary or {"text": prior_text, "timestamp": prior_time}
             else:
@@ -1417,21 +1431,18 @@ def create_gradio_interface():
                 # Skip for registration questions, greetings, or empty responses
                 # Prioritize plan responses
                 if is_registered and (has_actionable_content or plan_in_response) and not is_registration_flow and len(response.strip()) > 50:
-                    # Use simple formatting (no LLM to avoid event loop issues)
-                    # If it's a plan, format it specially and save to profile
+                    # If it's a plan, save full plan to profile and generate concise summary with LLM
                     if plan_in_response:
                         plan_timestamp = timestamp or datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
-                        plan_summary_text = f"**Operational Plan** _(created {plan_timestamp})_\n\n{response}"
-                        summary_markdown = format_summary_section(plan_summary_text, plan_timestamp)
-                        updated_summary = {"text": plan_summary_text, "timestamp": plan_timestamp}
+                        # Store raw plan text in state; use LLM to summarize for display
+                        plan_content = response.strip()
+                        summary_markdown = await format_summary_section_async(plan_content, plan_timestamp)
+                        updated_summary = {"text": plan_content, "timestamp": plan_timestamp}
                         
                         # Save the plan to the user's profile in Firestore and send email
                         try:
                             memory_client = create_memory_client(use_vertex_memory=USE_VERTEX_MEMORY)
-                            # Extract just the plan content (without the markdown formatting) for storage
-                            plan_content = response.strip()
-                            
-                            # Save to profile
+                            # Save plan text to persistent profile (Firestore)
                             await record_instruction(
                                 user_id=user_id.strip(),
                                 instruction_text=plan_content,
@@ -1464,7 +1475,8 @@ def create_gradio_interface():
                             logging.error(f"Error saving plan to profile: {e}", exc_info=True)
                             # Don't break the flow, just log the error
                     else:
-                        summary_markdown = format_summary_section(response, timestamp)
+                        # For general actionable responses, use the executive summary agent
+                        summary_markdown = await format_summary_section_async(response, timestamp)
                         updated_summary = {"text": response, "timestamp": timestamp}
                 else:
                     # Keep previous summary or use default for non-actionable content
@@ -1729,7 +1741,8 @@ def create_gradio_interface():
                 
                 # Only show summary for registered users with actionable recommendations
                 if is_registered and has_actionable_content and not is_registration_flow and len(response.strip()) > 50:
-                    summary_markdown = format_summary_section(response, timestamp)
+                    # Use the executive summary agent for concise, focused summary
+                    summary_markdown = await format_summary_section_async(response, timestamp)
                     updated_summary = {"text": response, "timestamp": timestamp}
                 else:
                     # Keep previous summary for non-actionable content

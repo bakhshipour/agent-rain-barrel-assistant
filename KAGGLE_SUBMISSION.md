@@ -3,10 +3,10 @@
 # Kaggle Submission - Rain Barrel Operations Assistant
 
 ## Title
-**Rain Barrel Operations Assistant: AI Agents for Water Conservation and Flood Mitigation**
+**Rain Barrel Operations Assistant**
 
 ## Subtitle
-**Multi-agent system that converts complex weather forecasts into actionable rain barrel operation recommendations, helping cities conserve water and reduce flood risk**
+**AI agents turn weather into rain-barrel actions, conserving water and cutting urban flood risk.**
 
 ## Submission Track
 **Agents for Good**
