@@ -16,62 +16,27 @@
    ```powershell
    .\deploy_weather_monitoring.sh  # Or use bash/WSL
    ```
-
-See `QUICK_DEPLOY.md` for detailed steps.
-
 ---
 
 ## Recommended GCP Services
 
 ### Core Services
 
-1. **Cloud Run** (Recommended for UI)
-   - **Why**: Serverless, auto-scaling, pay-per-use
+1. **Cloud Run**
    - **Use for**: Gradio UI application
-   - **Benefits**: 
-     - No server management
-     - Auto-scales to zero when not in use
-     - Built-in HTTPS
-     - Easy deployment from container
 
-2. **Cloud Scheduler + Cloud Functions** (Recommended for Weather Monitoring)
-   - **Why**: Perfect for scheduled tasks
+2. **Cloud Scheduler + Cloud Functions**
    - **Use for**: Weather monitoring job (runs every 6 hours)
-   - **Benefits**:
-     - Serverless scheduled execution
-     - No need to keep a server running
-     - Cost-effective (only pay when running)
 
-3. **Firestore** (Already Using)
+3. **Firestore** 
    - **Why**: NoSQL database, already integrated
    - **Use for**: User profiles, weather forecasts
-   - **Status**: ✅ Already configured
 
-4. **Secret Manager** (Recommended for Credentials)
-   - **Why**: Secure storage of API keys and passwords
+4. **Secret Manager** 
    - **Use for**: GOOGLE_API_KEY, SMTP credentials
-   - **Benefits**: 
-     - Encrypted at rest
-     - Access control via IAM
-     - Versioning support
 
-5. **Cloud Logging** (Recommended for Monitoring)
-   - **Why**: Centralized logging and monitoring
+5. **Cloud Logging**
    - **Use for**: Application logs, error tracking
-   - **Benefits**: 
-     - Integrated with GCP services
-     - Log-based metrics
-     - Alerting capabilities
-
-### Optional Services
-
-6. **Cloud Build** (CI/CD)
-   - **Why**: Automated builds and deployments
-   - **Use for**: Building Docker images, deploying to Cloud Run
-
-7. **Cloud Monitoring** (Observability)
-   - **Why**: Metrics, dashboards, alerts
-   - **Use for**: Monitor application health, API usage
 
 ---
 
@@ -336,94 +301,3 @@ else:
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
     SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 ```
-
----
-
-## Cost Estimation
-
-### Cloud Run (UI)
-- **Free tier**: 2 million requests/month
-- **After free tier**: ~$0.40 per million requests
-- **CPU/Memory**: ~$0.00002400 per vCPU-second, ~$0.00000250 per GiB-second
-- **Estimated**: $5-20/month for moderate usage
-
-### Cloud Functions (Weather Monitoring)
-- **Free tier**: 2 million invocations/month
-- **After free tier**: ~$0.40 per million invocations
-- **Estimated**: <$1/month (runs 4 times/day = ~120/month)
-
-### Firestore
-- **Free tier**: 1 GiB storage, 50K reads/day, 20K writes/day
-- **After free tier**: $0.18/GiB storage, $0.06 per 100K reads, $0.18 per 100K writes
-- **Estimated**: $1-5/month for moderate usage
-
-### Cloud Scheduler
-- **Free tier**: 3 jobs
-- **After free tier**: $0.10 per job per month
-- **Estimated**: <$1/month
-
-### **Total Estimated Cost: $10-30/month** (after free tiers)
-
----
-
-## Alternative: Simpler Deployment (Single Service)
-
-If you want a simpler setup, you can run everything in Cloud Run:
-
-### Option: Cloud Run with Background Tasks
-
-Use Cloud Run with a background thread for scheduling:
-
-```python
-# In rain_barrel_ui.py, add at the end:
-import threading
-from scheduler_service import start_weather_monitoring_scheduler
-
-if __name__ == "__main__":
-    # Start weather monitoring scheduler in background
-    start_weather_monitoring_scheduler(
-        interval_hours=6,
-        run_immediately=False
-    )
-    
-    demo = create_gradio_interface()
-    demo.launch(server_name="0.0.0.0", server_port=int(os.getenv("PORT", 7860)))
-```
-
-**Pros**: Simpler, single service
-**Cons**: Scheduler runs in same instance, less reliable if instance scales to zero
-
----
-
-## Recommended Approach
-
-**For Production**: Use **Cloud Run (UI) + Cloud Functions (Monitoring)**
-- Better separation of concerns
-- More reliable scheduling
-- Better cost optimization
-- Easier to scale independently
-
-**For MVP/Testing**: Use **Cloud Run only** with background scheduler
-- Simpler deployment
-- Faster to set up
-- Good enough for initial testing
-
----
-
-## Next Steps
-
-1. **Choose deployment approach** (Cloud Run only vs. Cloud Run + Functions)
-2. **Set up Secret Manager** for credentials
-3. **Create Dockerfile** and test locally
-4. **Deploy to Cloud Run**
-5. **Set up Cloud Scheduler** (if using Functions approach)
-6. **Test end-to-end**
-7. **Set up monitoring and alerts**
-
-Would you like me to:
-1. Create the Dockerfile and deployment scripts?
-2. Update the code for Cloud Run compatibility?
-3. Create a simpler single-service deployment option?
-
-Let me know which approach you prefer! 🚀
-
